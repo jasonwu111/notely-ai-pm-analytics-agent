@@ -1,0 +1,206 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1860" height="1180" viewBox="0 0 1860 1180">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+      .subtitle { font: 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+      .table-box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; filter: drop-shadow(0 8px 18px rgba(15, 23, 42, 0.08)); }
+      .table-header { fill: #0f766e; }
+      .table-header-fill { fill: #0f766e; }
+      .table-title { font: 700 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #ffffff; }
+      .col { font: 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #334155; }
+      .pk { font-weight: 700; fill: #7c2d12; }
+      .fk { fill: #075985; }
+      .badge { font: 700 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .badge.pk { fill: #ea580c; }
+      .badge.fk { fill: #0284c7; }
+      .relationship { fill: none; stroke: #475569; stroke-width: 2; opacity: 0.86; }
+      .relationship.dashed { stroke-dasharray: 8 7; opacity: 0.58; }
+      .rel-label-bg { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1; opacity: 0.96; }
+      .rel-label { font: 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #334155; text-anchor: middle; }
+      .legend-box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.2; }
+      .legend-title { font: 700 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+      .legend-text { font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+    </style>
+  </defs>
+
+  <rect width="1860" height="1180" class="bg"/>
+  <text x="70" y="60" class="title">Notely AI Analytics Database ER Diagram</text>
+  <text x="70" y="88" class="subtitle">Logical primary keys and foreign-key relationships for the simulated PM analytics warehouse. SQLite constraints are not enforced in DDL; this diagram shows the intended relational model.</text>
+
+  <rect x="1435" y="35" width="355" height="70" rx="10" class="legend-box"/>
+  <text x="1455" y="62" class="legend-title">Legend</text>
+  <text x="1455" y="86" class="legend-text">PK = primary key, FK = logical foreign key, dashed = contextual/non-FK link</text>
+
+  <path d="M400,443 C460,443 460,227 520,227" class="relationship" marker-end="url(#arrow)"/>
+<rect x="374" y="321" width="172" height="24" rx="8" class="rel-label-bg"/>
+<text x="460" y="339" class="rel-label">1 to many: user_id</text>
+<path d="M400,443 C460,443 460,583 520,583" class="relationship" marker-end="url(#arrow)"/>
+<rect x="374" y="499" width="172" height="24" rx="8" class="rel-label-bg"/>
+<text x="460" y="517" class="rel-label">1 to many: user_id</text>
+<path d="M690,349 C690,387 700,387 700,425" class="relationship" marker-end="url(#arrow)"/>
+<rect x="609" y="373" width="172" height="24" rx="8" class="rel-label-bg"/>
+<text x="695" y="391" class="rel-label">1 to many: session_id</text>
+<path d="M235,601 C235,703 695,703 695,805" class="relationship" marker-end="url(#arrow)"/>
+<rect x="379" y="689" width="172" height="24" rx="8" class="rel-label-bg"/>
+<text x="465" y="707" class="rel-label">1 to many: user_id</text>
+<path d="M400,443 C705,443 705,369 1010,369" class="relationship" marker-end="url(#arrow)"/>
+<rect x="619" y="392" width="172" height="24" rx="8" class="rel-label-bg"/>
+<text x="705" y="410" class="rel-label">1 to many: user_id</text>
+<path d="M1350,369 C1392,369 1392,264 1435,264" class="relationship" marker-end="url(#arrow)"/>
+<rect x="1306" y="302" width="172" height="24" rx="8" class="rel-label-bg"/>
+<text x="1392" y="320" class="rel-label">1 to many: subscription_id</text>
+<path d="M1612,398 C1612,464 1612,464 1612,530" class="relationship" marker-end="url(#arrow)"/>
+<rect x="1526" y="450" width="172" height="24" rx="8" class="rel-label-bg"/>
+<text x="1612" y="468" class="rel-label">1 to many: invoice_id</text>
+<path d="M1350,369 C1392,369 1392,652 1435,652" class="relationship" marker-end="url(#arrow)"/>
+<rect x="1306" y="496" width="172" height="24" rx="8" class="rel-label-bg"/>
+<text x="1392" y="514" class="rel-label">1 to many: subscription_id</text>
+<path d="M400,443 C705,443 705,927 1010,927" class="relationship" marker-end="url(#arrow)"/>
+<rect x="619" y="671" width="172" height="24" rx="8" class="rel-label-bg"/>
+<text x="705" y="689" class="rel-label">1 to many: user_id</text>
+<path d="M400,443 C917,443 917,264 1435,264" class="relationship dashed" marker-end="url(#arrow)"/>
+<rect x="831" y="339" width="172" height="24" rx="8" class="rel-label-bg"/>
+<text x="917" y="357" class="rel-label">1 to many: user_id</text>
+<path d="M400,443 C917,443 917,652 1435,652" class="relationship dashed" marker-end="url(#arrow)"/>
+<rect x="831" y="533" width="172" height="24" rx="8" class="rel-label-bg"/>
+<text x="917" y="551" class="rel-label">1 to many: user_id</text>
+<path d="M410,903 C465,903 465,583 520,583" class="relationship dashed" marker-end="url(#arrow)"/>
+<rect x="379" y="729" width="172" height="24" rx="8" class="rel-label-bg"/>
+<text x="465" y="747" class="rel-label">context for RCA/RAG</text>
+
+  <rect x="70" y="285" width="330" height="316" rx="10" class="table-box"/>
+<rect x="70" y="285" width="330" height="42" rx="10" class="table-header"/>
+<path d="M70,319 h330 v8 h-330 z" class="table-header-fill"/>
+<text x="86" y="312" class="table-title">users</text>
+<text x="86" y="351" class="badge pk">PK</text>
+<text x="128" y="351" class="col pk">user_id</text>
+<text x="86" y="375" class="col">signup_timestamp</text>
+<text x="86" y="399" class="col">signup_date</text>
+<text x="86" y="423" class="col">country, region</text>
+<text x="86" y="447" class="col">acquisition_channel</text>
+<text x="86" y="471" class="col">campaign_name</text>
+<text x="86" y="495" class="col">platform, device_type</text>
+<text x="86" y="519" class="col">user_segment</text>
+<text x="86" y="543" class="col">company_size</text>
+<text x="86" y="567" class="col">plan_type_at_signup</text>
+<text x="86" y="591" class="col">onboarding_flow_variant</text>
+<rect x="520" y="105" width="340" height="244" rx="10" class="table-box"/>
+<rect x="520" y="105" width="340" height="42" rx="10" class="table-header"/>
+<path d="M520,139 h340 v8 h-340 z" class="table-header-fill"/>
+<text x="536" y="132" class="table-title">sessions</text>
+<text x="536" y="171" class="badge pk">PK</text>
+<text x="578" y="171" class="col pk">session_id</text>
+<text x="536" y="195" class="badge fk">FK</text>
+<text x="578" y="195" class="col fk">user_id -&gt; users.user_id</text>
+<text x="536" y="219" class="col">session_start, session_end</text>
+<text x="536" y="243" class="col">session_date</text>
+<text x="536" y="267" class="col">session_duration_seconds</text>
+<text x="536" y="291" class="col">entry_page</text>
+<text x="536" y="315" class="col">traffic_source</text>
+<text x="536" y="339" class="col">platform, device_type</text>
+<rect x="520" y="425" width="360" height="316" rx="10" class="table-box"/>
+<rect x="520" y="425" width="360" height="42" rx="10" class="table-header"/>
+<path d="M520,459 h360 v8 h-360 z" class="table-header-fill"/>
+<text x="536" y="452" class="table-title">events</text>
+<text x="536" y="491" class="badge pk">PK</text>
+<text x="578" y="491" class="col pk">event_id</text>
+<text x="536" y="515" class="badge fk">FK</text>
+<text x="578" y="515" class="col fk">user_id -&gt; users.user_id</text>
+<text x="536" y="539" class="badge fk">FK</text>
+<text x="578" y="539" class="col fk">session_id -&gt; sessions.session_id</text>
+<text x="536" y="563" class="col">event_timestamp</text>
+<text x="536" y="587" class="col">event_date</text>
+<text x="536" y="611" class="col">event_name</text>
+<text x="536" y="635" class="col">platform, device_type</text>
+<text x="536" y="659" class="col">country</text>
+<text x="536" y="683" class="col">plan_type</text>
+<text x="536" y="707" class="col">user_segment</text>
+<text x="536" y="731" class="col">properties JSON</text>
+<rect x="520" y="805" width="350" height="196" rx="10" class="table-box"/>
+<rect x="520" y="805" width="350" height="42" rx="10" class="table-header"/>
+<path d="M520,839 h350 v8 h-350 z" class="table-header-fill"/>
+<text x="536" y="832" class="table-title">experiments</text>
+<text x="536" y="871" class="badge pk">PK</text>
+<text x="578" y="871" class="col pk">assignment_id</text>
+<text x="536" y="895" class="badge fk">FK</text>
+<text x="578" y="895" class="col fk">user_id -&gt; users.user_id</text>
+<text x="536" y="919" class="col">experiment_name</text>
+<text x="536" y="943" class="col">variant</text>
+<text x="536" y="967" class="col">assigned_date</text>
+<text x="536" y="991" class="col">exposed_date</text>
+<rect x="1010" y="235" width="340" height="268" rx="10" class="table-box"/>
+<rect x="1010" y="235" width="340" height="42" rx="10" class="table-header"/>
+<path d="M1010,269 h340 v8 h-340 z" class="table-header-fill"/>
+<text x="1026" y="262" class="table-title">subscriptions</text>
+<text x="1026" y="301" class="badge pk">PK</text>
+<text x="1068" y="301" class="col pk">subscription_id</text>
+<text x="1026" y="325" class="badge fk">FK</text>
+<text x="1068" y="325" class="col fk">user_id -&gt; users.user_id</text>
+<text x="1026" y="349" class="col">subscription_start_date</text>
+<text x="1026" y="373" class="col">subscription_end_date</text>
+<text x="1026" y="397" class="col">status</text>
+<text x="1026" y="421" class="col">plan</text>
+<text x="1026" y="445" class="col">monthly_price</text>
+<text x="1026" y="469" class="col">billing_cycle</text>
+<text x="1026" y="493" class="col">cancel_reason</text>
+<rect x="1435" y="130" width="355" height="268" rx="10" class="table-box"/>
+<rect x="1435" y="130" width="355" height="42" rx="10" class="table-header"/>
+<path d="M1435,164 h355 v8 h-355 z" class="table-header-fill"/>
+<text x="1451" y="157" class="table-title">billing_invoices</text>
+<text x="1451" y="196" class="badge pk">PK</text>
+<text x="1493" y="196" class="col pk">invoice_id</text>
+<text x="1451" y="220" class="badge fk">FK</text>
+<text x="1493" y="220" class="col fk">subscription_id -&gt; subscriptions.subscription_id</text>
+<text x="1451" y="244" class="badge fk">FK</text>
+<text x="1493" y="244" class="col fk">user_id -&gt; users.user_id</text>
+<text x="1451" y="268" class="col">invoice_date</text>
+<text x="1451" y="292" class="col">billing_period_start</text>
+<text x="1451" y="316" class="col">billing_period_end</text>
+<text x="1451" y="340" class="col">amount</text>
+<text x="1451" y="364" class="col">status</text>
+<text x="1451" y="388" class="col">paid_date</text>
+<rect x="1435" y="530" width="355" height="244" rx="10" class="table-box"/>
+<rect x="1435" y="530" width="355" height="42" rx="10" class="table-header"/>
+<path d="M1435,564 h355 v8 h-355 z" class="table-header-fill"/>
+<text x="1451" y="557" class="table-title">payments</text>
+<text x="1451" y="596" class="badge pk">PK</text>
+<text x="1493" y="596" class="col pk">payment_id</text>
+<text x="1451" y="620" class="badge fk">FK</text>
+<text x="1493" y="620" class="col fk">invoice_id -&gt; billing_invoices.invoice_id</text>
+<text x="1451" y="644" class="badge fk">FK</text>
+<text x="1493" y="644" class="col fk">subscription_id -&gt; subscriptions.subscription_id</text>
+<text x="1451" y="668" class="badge fk">FK</text>
+<text x="1493" y="668" class="col fk">user_id -&gt; users.user_id</text>
+<text x="1451" y="692" class="col">payment_date</text>
+<text x="1451" y="716" class="col">amount</text>
+<text x="1451" y="740" class="col">status</text>
+<text x="1451" y="764" class="col">failure_reason</text>
+<rect x="1010" y="805" width="340" height="244" rx="10" class="table-box"/>
+<rect x="1010" y="805" width="340" height="42" rx="10" class="table-header"/>
+<path d="M1010,839 h340 v8 h-340 z" class="table-header-fill"/>
+<text x="1026" y="832" class="table-title">support_tickets</text>
+<text x="1026" y="871" class="badge pk">PK</text>
+<text x="1068" y="871" class="col pk">ticket_id</text>
+<text x="1026" y="895" class="badge fk">FK</text>
+<text x="1068" y="895" class="col fk">user_id -&gt; users.user_id</text>
+<text x="1026" y="919" class="col">created_date</text>
+<text x="1026" y="943" class="col">category</text>
+<text x="1026" y="967" class="col">sentiment</text>
+<text x="1026" y="991" class="col">status</text>
+<text x="1026" y="1015" class="col">resolution_time_hours</text>
+<text x="1026" y="1039" class="col">platform</text>
+<rect x="70" y="805" width="340" height="196" rx="10" class="table-box"/>
+<rect x="70" y="805" width="340" height="42" rx="10" class="table-header"/>
+<path d="M70,839 h340 v8 h-340 z" class="table-header-fill"/>
+<text x="86" y="832" class="table-title">product_calendar</text>
+<text x="86" y="871" class="col">calendar_date</text>
+<text x="86" y="895" class="col">event_type</text>
+<text x="86" y="919" class="col">title</text>
+<text x="86" y="943" class="col">description</text>
+<text x="86" y="967" class="col">affected_area</text>
+<text x="86" y="991" class="col">logical key: calendar_date + title</text>
+</svg>
