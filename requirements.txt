@@ -1,0 +1,16 @@
+# Core data analysis stack
+numpy>=1.26,<2.0
+pandas>=2.2,<2.3
+
+# Notebook environment
+jupyterlab>=4.2,<5
+notebook>=7.2,<8
+ipykernel>=6.29,<7
+
+# Visualization used by exploration and analysis notebooks
+matplotlib>=3.8,<3.10
+seaborn>=0.13,<0.14
+
+# Image and diagram generation helpers
+Pillow>=10,<11
+CairoSVG>=2.7,<3
