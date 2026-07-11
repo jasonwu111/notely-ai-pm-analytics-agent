@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -410,6 +411,190 @@ def get_product_context(
     result["start_date"] = start_date
     result["end_date"] = end_date
     return result
+
+
+def diagnose_metric_change(
+    metric_name: str,
+    change_date: str,
+    segment: Optional[str] = None,
+    group_by: Optional[str] = None,
+    window_days: int = 7,
+    db_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Diagnose a metric change with before/after metrics and product context.
+
+    This higher-level tool is designed for PM questions such as:
+    "Why did iOS activation rate change around mid May?"
+
+    It reduces LLM planning burden by enforcing a repeatable analytics path:
+    - compare the target metric before and after the change date
+    - retrieve product context around the same period
+    - retrieve adjacent funnel metrics when useful
+    """
+    metric = metric_name.strip().lower()
+    if metric not in available_metrics():
+        raise ToolError(f"Unsupported metric_name: {metric_name}")
+    validate_date(change_date)
+    if window_days < 1 or window_days > 30:
+        raise ToolError("window_days must be between 1 and 30.")
+
+    if segment and not group_by:
+        group_by = infer_group_by_for_segment(segment)
+
+    change_dt = parse_date(change_date)
+    before_start = format_date(change_dt - timedelta(days=window_days))
+    before_end = format_date(change_dt - timedelta(days=1))
+    after_start = change_date
+    after_end = format_date(change_dt + timedelta(days=window_days))
+
+    target_before = get_metric(metric, before_start, before_end, group_by=group_by, db_path=db_path)
+    target_after = get_metric(metric, after_start, after_end, group_by=group_by, db_path=db_path)
+    target_comparison = compare_metric_results(
+        metric,
+        target_before,
+        target_after,
+        segment=segment,
+        before_label=f"{before_start} to {before_end}",
+        after_label=f"{after_start} to {after_end}",
+    )
+
+    adjacent_metric_results = []
+    for adjacent_metric in adjacent_metrics_for(metric):
+        adjacent_before = get_metric(adjacent_metric, before_start, before_end, group_by=group_by, db_path=db_path)
+        adjacent_after = get_metric(adjacent_metric, after_start, after_end, group_by=group_by, db_path=db_path)
+        adjacent_metric_results.append(
+            compare_metric_results(
+                adjacent_metric,
+                adjacent_before,
+                adjacent_after,
+                segment=segment,
+                before_label=f"{before_start} to {before_end}",
+                after_label=f"{after_start} to {after_end}",
+            )
+        )
+
+    product_context = get_product_context(before_start, after_end, db_path=db_path)
+
+    return {
+        "metric_name": metric,
+        "change_date": change_date,
+        "segment": segment or "overall",
+        "group_by": group_by,
+        "window_days": window_days,
+        "analysis_windows": {
+            "before": {"start_date": before_start, "end_date": before_end},
+            "after": {"start_date": after_start, "end_date": after_end},
+        },
+        "target_metric": target_comparison,
+        "adjacent_metrics": adjacent_metric_results,
+        "product_context": product_context,
+        "interpretation_guidance": [
+            "Use the target_metric before/after delta as the main evidence.",
+            "Use adjacent_metrics to explain likely funnel drivers.",
+            "Use product_context only when the dates and affected_area plausibly connect to the metric.",
+            "Do not mention tables, columns, or SQL that are not present in tool output.",
+        ],
+    }
+
+
+def infer_group_by_for_segment(segment: str) -> str:
+    normalized = segment.strip().lower()
+    platform_values = {"ios", "android", "web"}
+    acquisition_values = {"organic", "paid_search", "referral", "sales", "content"}
+    user_segment_values = {"individual", "smb", "mid_market", "enterprise"}
+    if normalized in platform_values:
+        return "platform"
+    if normalized in acquisition_values:
+        return "acquisition_channel"
+    if normalized in user_segment_values:
+        return "user_segment"
+    raise ToolError(
+        "Could not infer group_by for segment. Provide group_by explicitly, "
+        "for example platform, acquisition_channel, or user_segment."
+    )
+
+
+def parse_date(value: str) -> datetime:
+    return datetime.strptime(value, "%Y-%m-%d")
+
+
+def format_date(value: datetime) -> str:
+    return value.strftime("%Y-%m-%d")
+
+
+def metric_value_key(metric_name: str) -> str:
+    keys = {
+        "new_users": "new_users",
+        "active_users": "active_users",
+        "activation_rate": "activation_rate",
+        "upload_completion_rate": "upload_completion_rate",
+        "summaries_per_active_user": "summaries_per_active_user",
+        "paid_conversion_rate": "paid_conversion_rate_30d",
+        "billing_persistence": "billing_persistence",
+    }
+    return keys[metric_name]
+
+
+def find_metric_row(result: Dict[str, Any], segment: Optional[str]) -> Dict[str, Any]:
+    rows = result.get("rows", [])
+    if not rows:
+        return {}
+    if not segment:
+        return rows[0]
+    target = segment.strip().lower()
+    for row in rows:
+        if str(row.get("segment", "")).strip().lower() == target:
+            return row
+    return {}
+
+
+def compare_metric_results(
+    metric_name: str,
+    before_result: Dict[str, Any],
+    after_result: Dict[str, Any],
+    segment: Optional[str],
+    before_label: str,
+    after_label: str,
+) -> Dict[str, Any]:
+    value_key = metric_value_key(metric_name)
+    before_row = find_metric_row(before_result, segment)
+    after_row = find_metric_row(after_result, segment)
+    before_value = before_row.get(value_key)
+    after_value = after_row.get(value_key)
+    absolute_change = None
+    relative_change_pct = None
+    if before_value is not None and after_value is not None:
+        absolute_change = round(after_value - before_value, 4)
+        if before_value != 0:
+            relative_change_pct = round(100.0 * (after_value - before_value) / before_value, 1)
+
+    return {
+        "metric_name": metric_name,
+        "value_key": value_key,
+        "segment": segment or "overall",
+        "before": {
+            "window": before_label,
+            "row": before_row,
+            "value": before_value,
+        },
+        "after": {
+            "window": after_label,
+            "row": after_row,
+            "value": after_value,
+        },
+        "absolute_change": absolute_change,
+        "relative_change_pct": relative_change_pct,
+    }
+
+
+def adjacent_metrics_for(metric_name: str) -> List[str]:
+    if metric_name == "activation_rate":
+        return ["upload_completion_rate"]
+    if metric_name == "paid_conversion_rate":
+        return ["activation_rate", "summaries_per_active_user"]
+    if metric_name == "summaries_per_active_user":
+        return ["active_users"]
+    return []
 
 
 def available_metrics() -> List[str]:

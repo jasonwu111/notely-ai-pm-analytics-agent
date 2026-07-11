@@ -15,7 +15,8 @@ This file captures the learning path behind the Notely AI PM Analytics Agent pro
 9. Build an agent tool layer so trusted SQL and metric logic can be called through Python functions.
 10. Expose those Python tools to an AI agent through function calling.
 11. Keep the LLM provider replaceable so local Llama/Ollama testing, OpenAI testing, and future providers can share the same agent loop.
-12. Later, use RAG so the agent can retrieve product context, incident logs, experiment notes, and metric definitions.
+12. Improve local-Ollama reliability by adding stricter prompt instructions and higher-level analytical tools for common PM workflows.
+13. Later, use RAG so the agent can retrieve product context, incident logs, experiment notes, and metric definitions.
 
 ## Important Concept Distinctions
 
@@ -48,3 +49,16 @@ Keeping these separate means the project can start with free local Llama testing
 ### Why Start With Ollama
 
 The user's OpenAI free-tier API limits are enough for small demos, but they are tight for repeated agent testing because one PM question may require multiple model calls. Ollama lets the project test prompts, tool schemas, and agent control flow locally without spending API credits or hitting daily request limits.
+
+
+### Prompting vs Higher-Level Tools
+
+The first LLM-backed demo successfully connected Ollama to the local tool layer, but the answer quality was incomplete: the model retrieved product context, then suggested a fake SQL query instead of pulling the actual activation metric.
+
+The fix is not only "use a stronger model." The project now treats this as an agent reliability problem:
+
+- Prompt constraints tell the model not to invent SQL, tables, columns, or numbers.
+- The metric-change SOP tells the model what analysis path to follow.
+- The `diagnose_metric_change` tool packages a common PM workflow into one trusted function: before/after metric comparison, adjacent funnel metric check, and product context retrieval.
+
+This is an important agent design lesson: when a workflow is repeatable, put the workflow into a tool instead of forcing the LLM to rediscover every step.

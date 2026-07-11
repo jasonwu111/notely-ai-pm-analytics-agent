@@ -144,6 +144,54 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "diagnose_metric_change",
+            "description": (
+                "Diagnose why a known metric changed around a date. "
+                "Returns before/after metric values, adjacent funnel metrics, and product context. "
+                "Use this first for PM questions phrased as why did a metric change, drop, improve, or move."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "metric_name": {
+                        "type": "string",
+                        "enum": analytics_tools.available_metrics(),
+                    },
+                    "change_date": {
+                        "type": "string",
+                        "description": "Approximate change date in YYYY-MM-DD format.",
+                    },
+                    "segment": {
+                        "type": ["string", "null"],
+                        "description": "Optional segment value, for example iOS, web, paid_search, or SMB.",
+                    },
+                    "group_by": {
+                        "type": ["string", "null"],
+                        "enum": [
+                            "platform",
+                            "device_type",
+                            "country",
+                            "region",
+                            "acquisition_channel",
+                            "user_segment",
+                            "plan_type",
+                            None,
+                        ],
+                        "description": "Dimension that segment belongs to. Optional for common segments such as iOS, android, web, paid_search, and SMB.",
+                    },
+                    "window_days": {
+                        "type": "integer",
+                        "description": "Days before and after the change date to compare. Defaults to 7.",
+                    },
+                },
+                "required": ["metric_name", "change_date"],
+                "additionalProperties": False,
+            },
+        },
+    },
 ]
 
 
@@ -154,6 +202,7 @@ TOOL_FUNCTIONS: Dict[str, Callable[..., Any]] = {
     "get_metric": analytics_tools.get_metric,
     "get_weekly_report": analytics_tools.get_weekly_report,
     "get_product_context": analytics_tools.get_product_context,
+    "diagnose_metric_change": analytics_tools.diagnose_metric_change,
 }
 
 

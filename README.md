@@ -81,6 +81,7 @@ The `notebooks/` folder contains a starter exploration notebook:
 - `02_metric_analysis.ipynb`: turns the tables into business analysis. It walks through activation, iOS upload reliability, paid search quality, onboarding experiment impact, action items retention, the Free limit change, and the weekly PM report prototype.
 - `03_agent_tool_layer.ipynb`: explains and demonstrates the deterministic Python tools that the future AI agent can call.
 - `04_llm_agent_api_layer.ipynb`: explains the first LLM-backed agent layer, including provider config, function schemas, and how Ollama/OpenAI can be swapped.
+- `05_agent_improvement_with_prompts.ipynb`: documents the first Ollama answer quality issue and shows how prompt constraints plus a higher-level diagnostic tool improve reliability.
 
 ## Metric Layer
 
@@ -102,7 +103,8 @@ These SQL files are the bridge between manual analytics and the future AI agent.
 
 The `agent/` folder contains the local tool layer:
 
-- `agent/tools.py`: deterministic Python functions for listing tables, describing schemas, safely running read-only SQL, retrieving trusted metrics, retrieving weekly report rows, and retrieving product context.
+- `agent/tools.py`: deterministic Python functions for listing tables, describing schemas, safely running read-only SQL, retrieving trusted metrics, retrieving weekly report rows, retrieving product context, and diagnosing metric changes.
+- `agent/tool_registry.py`: function-calling schemas for the tools, including the higher-level `diagnose_metric_change` tool for metric-change root-cause questions.
 - `agent_demo.py`: a small command-line demo that exercises the tool layer without using an LLM.
 
 To run the local tool demo:
