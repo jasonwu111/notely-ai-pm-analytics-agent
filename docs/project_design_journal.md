@@ -16,7 +16,8 @@ This file captures the learning path behind the Notely AI PM Analytics Agent pro
 10. Expose those Python tools to an AI agent through function calling.
 11. Keep the LLM provider replaceable so local Llama/Ollama testing, OpenAI testing, and future providers can share the same agent loop.
 12. Improve local-Ollama reliability by adding stricter prompt instructions and higher-level analytical tools for common PM workflows.
-13. Later, use RAG so the agent can retrieve product context, incident logs, experiment notes, and metric definitions.
+13. Add V3 trend tools so the agent can answer weekly/monthly standard metric questions without misusing group_by.
+14. Later, use RAG so the agent can retrieve product context, incident logs, experiment notes, and metric definitions.
 
 ## Important Concept Distinctions
 
@@ -62,3 +63,12 @@ The fix is not only "use a stronger model." The project now treats this as an ag
 - The `diagnose_metric_change` tool packages a common PM workflow into one trusted function: before/after metric comparison, adjacent funnel metric check, and product context retrieval.
 
 This is an important agent design lesson: when a workflow is repeatable, put the workflow into a tool instead of forcing the LLM to rediscover every step.
+
+
+### Trend Tools vs Ad-Hoc SQL
+
+A new class of PM questions asks for a metric over time, such as weekly activation rate from April through June. This is not a `group_by` problem; it is a time-grain problem.
+
+The V3 fix adds `get_metric_timeseries` and `analyze_metric_trend` so standard metrics can be analyzed by day, week, or month. This keeps the agent on trusted metric definitions while expanding the kinds of stakeholder questions it can answer.
+
+This is different from the future V4 safe SQL analyst. V3 answers standardized metric trend questions. V4 will handle more flexible ad-hoc SQL questions after stronger schema-reading and SQL-safety workflows are added.

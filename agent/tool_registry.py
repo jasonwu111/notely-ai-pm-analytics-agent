@@ -147,6 +147,54 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
     {
         "type": "function",
         "function": {
+            "name": "get_metric_timeseries",
+            "description": "Return a trusted metric as a day/week/month time series. Use for weekly, monthly, daily, over-time, and trend-table requests.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "metric_name": {"type": "string", "enum": analytics_tools.available_metrics()},
+                    "start_date": {"type": "string", "description": "Start date in YYYY-MM-DD format."},
+                    "end_date": {"type": "string", "description": "End date in YYYY-MM-DD format."},
+                    "grain": {"type": "string", "enum": ["day", "week", "month"], "description": "Time grain for the series."},
+                    "group_by": {
+                        "type": ["string", "null"],
+                        "enum": ["platform", "device_type", "country", "region", "acquisition_channel", "user_segment", "plan_type", None],
+                        "description": "Optional segment dimension, not the time grain."
+                    },
+                    "segment": {"type": ["string", "null"], "description": "Optional segment value to filter to, for example iOS or paid_search."},
+                },
+                "required": ["metric_name", "start_date", "end_date"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "analyze_metric_trend",
+            "description": "Analyze whether a trusted metric is increasing, decreasing, flat, or mixed over day/week/month periods. Use first for trend questions.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "metric_name": {"type": "string", "enum": analytics_tools.available_metrics()},
+                    "start_date": {"type": "string", "description": "Start date in YYYY-MM-DD format."},
+                    "end_date": {"type": "string", "description": "End date in YYYY-MM-DD format."},
+                    "grain": {"type": "string", "enum": ["day", "week", "month"], "description": "Time grain for the trend."},
+                    "group_by": {
+                        "type": ["string", "null"],
+                        "enum": ["platform", "device_type", "country", "region", "acquisition_channel", "user_segment", "plan_type", None],
+                        "description": "Optional segment dimension, not the time grain."
+                    },
+                    "segment": {"type": ["string", "null"], "description": "Optional segment value to filter to, for example iOS or paid_search."},
+                },
+                "required": ["metric_name", "start_date", "end_date"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "diagnose_metric_change",
             "description": (
                 "Diagnose why a known metric changed around a date. "
@@ -200,6 +248,8 @@ TOOL_FUNCTIONS: Dict[str, Callable[..., Any]] = {
     "describe_table": analytics_tools.describe_table,
     "run_sql": analytics_tools.run_sql,
     "get_metric": analytics_tools.get_metric,
+    "get_metric_timeseries": analytics_tools.get_metric_timeseries,
+    "analyze_metric_trend": analytics_tools.analyze_metric_trend,
     "get_weekly_report": analytics_tools.get_weekly_report,
     "get_product_context": analytics_tools.get_product_context,
     "diagnose_metric_change": analytics_tools.diagnose_metric_change,

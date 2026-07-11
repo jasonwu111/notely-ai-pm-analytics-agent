@@ -413,6 +413,86 @@ def get_product_context(
     return result
 
 
+def get_metric_timeseries(
+    metric_name: str,
+    start_date: str,
+    end_date: str,
+    grain: str = "week",
+    group_by: Optional[str] = None,
+    segment: Optional[str] = None,
+    db_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Return a trusted metric as a day/week/month time series."""
+    validate_date(start_date)
+    validate_date(end_date)
+    if start_date > end_date:
+        raise ToolError("start_date must be before or equal to end_date.")
+
+    metric = metric_name.strip().lower()
+    if metric not in available_metrics():
+        raise ToolError(f"Unsupported metric_name: {metric_name}")
+    safe_grain = validate_grain(grain)
+    if segment and not group_by:
+        group_by = infer_group_by_for_segment(segment)
+
+    sql = metric_timeseries_sql(metric, start_date, end_date, safe_grain, group_by)
+    result = run_sql(sql, limit=1000, db_path=db_path)
+    rows = filter_rows_by_segment(result["rows"], segment)
+    result["rows"] = rows
+    result["row_count"] = len(rows)
+    result["metric_name"] = metric
+    result["start_date"] = start_date
+    result["end_date"] = end_date
+    result["grain"] = safe_grain
+    result["group_by"] = group_by
+    result["segment"] = segment
+    result["value_key"] = metric_value_key(metric)
+    return result
+
+
+def analyze_metric_trend(
+    metric_name: str,
+    start_date: str,
+    end_date: str,
+    grain: str = "week",
+    group_by: Optional[str] = None,
+    segment: Optional[str] = None,
+    db_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Return metric time series plus a simple trend summary."""
+    series = get_metric_timeseries(
+        metric_name=metric_name,
+        start_date=start_date,
+        end_date=end_date,
+        grain=grain,
+        group_by=group_by,
+        segment=segment,
+        db_path=db_path,
+    )
+    value_key = series["value_key"]
+    rows = [row for row in series["rows"] if row.get(value_key) is not None]
+    summary = summarize_trend(rows, value_key)
+    product_context = get_product_context(start_date, end_date, db_path=db_path)
+    return {
+        "metric_name": series["metric_name"],
+        "start_date": start_date,
+        "end_date": end_date,
+        "grain": series["grain"],
+        "group_by": series["group_by"],
+        "segment": segment or "overall",
+        "value_key": value_key,
+        "timeseries": series,
+        "trend_summary": summary,
+        "product_context": product_context,
+        "interpretation_guidance": [
+            "Use the timeseries rows as the source of truth.",
+            "State whether the trend is increasing, decreasing, mixed, or flat based on trend_summary.",
+            "Mention product_context only when the dates plausibly explain jumps, drops, or inflection points.",
+            "Do not describe time grain as group_by. Time grain is grain, such as week or month.",
+        ],
+    }
+
+
 def diagnose_metric_change(
     metric_name: str,
     change_date: str,
@@ -494,6 +574,254 @@ def diagnose_metric_change(
             "Use product_context only when the dates and affected_area plausibly connect to the metric.",
             "Do not mention tables, columns, or SQL that are not present in tool output.",
         ],
+    }
+
+
+def validate_grain(grain: str) -> str:
+    safe_grain = grain.strip().lower()
+    if safe_grain not in {"day", "week", "month"}:
+        raise ToolError("grain must be day, week, or month.")
+    return safe_grain
+
+
+def period_start_expr(date_expr: str, grain: str) -> str:
+    if grain == "day":
+        return f"date({date_expr})"
+    if grain == "week":
+        return f"date({date_expr}, '-' || ((CAST(strftime('%w', {date_expr}) AS INTEGER) + 6) % 7) || ' days')"
+    if grain == "month":
+        return f"date({date_expr}, 'start of month')"
+    raise ToolError("grain must be day, week, or month.")
+
+
+def metric_timeseries_sql(
+    metric: str,
+    start_date: str,
+    end_date: str,
+    grain: str,
+    group_by: Optional[str],
+) -> str:
+    group_clause = build_group_clause(group_by)
+    segment_select = group_clause["select"]
+    group_sql = ", segment" if group_by else ""
+    order_sql = "period_start, segment"
+
+    if metric == "new_users":
+        period_expr = period_start_expr("u.signup_date", grain)
+        return f"""
+        SELECT
+          {period_expr} AS period_start,
+          {segment_select},
+          COUNT(*) AS new_users
+        FROM users u
+        WHERE u.signup_date BETWEEN '{start_date}' AND '{end_date}'
+        GROUP BY period_start{group_sql}
+        ORDER BY {order_sql}
+        """
+
+    if metric == "active_users":
+        period_expr = period_start_expr("e.event_date", grain)
+        return f"""
+        SELECT
+          {period_expr} AS period_start,
+          {segment_select},
+          COUNT(DISTINCT e.user_id) AS active_users
+        FROM events e
+        JOIN users u ON e.user_id = u.user_id
+        WHERE e.event_date BETWEEN '{start_date}' AND '{end_date}'
+        GROUP BY period_start{group_sql}
+        ORDER BY {order_sql}
+        """
+
+    if metric == "activation_rate":
+        period_expr = period_start_expr("u.signup_date", grain)
+        return f"""
+        WITH user_activation AS (
+          SELECT
+            u.user_id,
+            {period_expr} AS period_start,
+            {segment_select},
+            MAX(CASE WHEN e.event_name = 'workspace_created' THEN 1 ELSE 0 END) AS has_workspace,
+            MAX(CASE WHEN e.event_name = 'recording_upload_completed' THEN 1 ELSE 0 END) AS has_upload,
+            MAX(CASE WHEN e.event_name = 'ai_summary_generated' THEN 1 ELSE 0 END) AS has_summary
+          FROM users u
+          LEFT JOIN events e
+            ON u.user_id = e.user_id
+           AND e.event_date BETWEEN u.signup_date AND date(u.signup_date, '+7 day')
+          WHERE u.signup_date BETWEEN '{start_date}' AND '{end_date}'
+          GROUP BY u.user_id, period_start, segment
+        )
+        SELECT
+          period_start,
+          segment,
+          COUNT(*) AS new_users,
+          SUM(CASE WHEN has_workspace = 1 AND has_upload = 1 AND has_summary = 1 THEN 1 ELSE 0 END) AS activated_users,
+          ROUND(1.0 * SUM(CASE WHEN has_workspace = 1 AND has_upload = 1 AND has_summary = 1 THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 3) AS activation_rate
+        FROM user_activation
+        GROUP BY period_start, segment
+        ORDER BY {order_sql}
+        """
+
+    if metric == "upload_completion_rate":
+        period_expr = period_start_expr("e.event_date", grain)
+        return f"""
+        SELECT
+          {period_expr} AS period_start,
+          {segment_select},
+          COUNT(CASE WHEN e.event_name = 'recording_upload_started' THEN 1 END) AS upload_starts,
+          COUNT(CASE WHEN e.event_name = 'recording_upload_completed' THEN 1 END) AS upload_completions,
+          ROUND(
+            1.0 * COUNT(CASE WHEN e.event_name = 'recording_upload_completed' THEN 1 END)
+            / NULLIF(COUNT(CASE WHEN e.event_name = 'recording_upload_started' THEN 1 END), 0),
+            3
+          ) AS upload_completion_rate
+        FROM events e
+        JOIN users u ON e.user_id = u.user_id
+        WHERE e.event_date BETWEEN '{start_date}' AND '{end_date}'
+          AND e.event_name IN ('recording_upload_started', 'recording_upload_completed')
+        GROUP BY period_start{group_sql}
+        ORDER BY {order_sql}
+        """
+
+    if metric == "summaries_per_active_user":
+        period_expr = period_start_expr("e.event_date", grain)
+        return f"""
+        SELECT
+          {period_expr} AS period_start,
+          {segment_select},
+          COUNT(DISTINCT e.user_id) AS active_users,
+          COUNT(CASE WHEN e.event_name = 'ai_summary_generated' THEN 1 END) AS summaries_generated,
+          ROUND(1.0 * COUNT(CASE WHEN e.event_name = 'ai_summary_generated' THEN 1 END) / NULLIF(COUNT(DISTINCT e.user_id), 0), 2) AS summaries_per_active_user
+        FROM events e
+        JOIN users u ON e.user_id = u.user_id
+        WHERE e.event_date BETWEEN '{start_date}' AND '{end_date}'
+        GROUP BY period_start{group_sql}
+        ORDER BY {order_sql}
+        """
+
+    if metric == "paid_conversion_rate":
+        period_expr = period_start_expr("u.signup_date", grain)
+        return f"""
+        WITH user_paid AS (
+          SELECT
+            u.user_id,
+            {period_expr} AS period_start,
+            {segment_select},
+            MAX(CASE WHEN s.subscription_start_date BETWEEN u.signup_date AND date(u.signup_date, '+30 day') THEN 1 ELSE 0 END) AS paid_30d
+          FROM users u
+          LEFT JOIN events e ON u.user_id = e.user_id
+          LEFT JOIN subscriptions s ON u.user_id = s.user_id
+          WHERE u.signup_date BETWEEN '{start_date}' AND '{end_date}'
+          GROUP BY u.user_id, period_start, segment
+        )
+        SELECT
+          period_start,
+          segment,
+          COUNT(*) AS users,
+          SUM(paid_30d) AS paid_users_30d,
+          ROUND(1.0 * SUM(paid_30d) / NULLIF(COUNT(*), 0), 3) AS paid_conversion_rate_30d
+        FROM user_paid
+        GROUP BY period_start, segment
+        ORDER BY {order_sql}
+        """
+
+    if metric == "billing_persistence":
+        period_expr = period_start_expr("bi.invoice_date", grain)
+        if group_by:
+            return f"""
+            SELECT
+              {period_expr} AS period_start,
+              {segment_select},
+              COUNT(*) AS invoices,
+              SUM(CASE WHEN bi.status = 'paid' THEN 1 ELSE 0 END) AS paid_invoices,
+              ROUND(AVG(CASE WHEN bi.status = 'paid' THEN 1.0 ELSE 0.0 END), 3) AS billing_persistence
+            FROM billing_invoices bi
+            JOIN users u ON bi.user_id = u.user_id
+            WHERE bi.invoice_date BETWEEN '{start_date}' AND '{end_date}'
+            GROUP BY period_start{group_sql}
+            ORDER BY {order_sql}
+            """
+        return f"""
+        SELECT
+          {period_expr} AS period_start,
+          'overall' AS segment,
+          COUNT(*) AS invoices,
+          SUM(CASE WHEN bi.status = 'paid' THEN 1 ELSE 0 END) AS paid_invoices,
+          ROUND(AVG(CASE WHEN bi.status = 'paid' THEN 1.0 ELSE 0.0 END), 3) AS billing_persistence
+        FROM billing_invoices bi
+        WHERE bi.invoice_date BETWEEN '{start_date}' AND '{end_date}'
+        GROUP BY period_start
+        ORDER BY period_start, segment
+        """
+
+    raise ToolError(f"Unsupported metric_name: {metric}")
+
+
+def filter_rows_by_segment(rows: List[Dict[str, Any]], segment: Optional[str]) -> List[Dict[str, Any]]:
+    if not segment:
+        return rows
+    target = segment.strip().lower()
+    return [row for row in rows if str(row.get("segment", "")).strip().lower() == target]
+
+
+def summarize_trend(rows: List[Dict[str, Any]], value_key: str) -> Dict[str, Any]:
+    if not rows:
+        return {
+            "direction": "insufficient_data",
+            "points": 0,
+            "message": "No rows were returned for this metric trend.",
+        }
+
+    ordered = sorted(rows, key=lambda row: row["period_start"])
+    first = ordered[0]
+    last = ordered[-1]
+    first_value = first.get(value_key)
+    last_value = last.get(value_key)
+    absolute_change = None
+    relative_change_pct = None
+    direction = "insufficient_data"
+    if first_value is not None and last_value is not None:
+        absolute_change = round(last_value - first_value, 4)
+        if first_value != 0:
+            relative_change_pct = round(100.0 * (last_value - first_value) / first_value, 1)
+        if absolute_change > 0.01:
+            direction = "increasing"
+        elif absolute_change < -0.01:
+            direction = "decreasing"
+        else:
+            direction = "flat"
+
+    values = [row for row in ordered if row.get(value_key) is not None]
+    max_row = max(values, key=lambda row: row[value_key]) if values else {}
+    min_row = min(values, key=lambda row: row[value_key]) if values else {}
+    positive_steps = 0
+    negative_steps = 0
+    for previous, current in zip(ordered, ordered[1:]):
+        if previous.get(value_key) is None or current.get(value_key) is None:
+            continue
+        delta = current[value_key] - previous[value_key]
+        if delta > 0:
+            positive_steps += 1
+        elif delta < 0:
+            negative_steps += 1
+    if direction in {"increasing", "decreasing"} and positive_steps > 0 and negative_steps > 0:
+        direction = f"mixed_but_{direction}"
+
+    return {
+        "direction": direction,
+        "points": len(ordered),
+        "first_period": first.get("period_start"),
+        "first_value": first_value,
+        "last_period": last.get("period_start"),
+        "last_value": last_value,
+        "absolute_change": absolute_change,
+        "relative_change_pct": relative_change_pct,
+        "positive_steps": positive_steps,
+        "negative_steps": negative_steps,
+        "max_period": max_row.get("period_start"),
+        "max_value": max_row.get(value_key),
+        "min_period": min_row.get("period_start"),
+        "min_value": min_row.get(value_key),
     }
 
 
